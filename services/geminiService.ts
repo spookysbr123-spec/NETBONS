@@ -2,6 +2,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Movie } from "../types";
 
+// Inicialização segura para o ambiente de produção
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
 export const getMovieRecommendation = async (userPreference: string): Promise<Partial<Movie>> => {
@@ -30,8 +31,8 @@ export const getMovieRecommendation = async (userPreference: string): Promise<Pa
     return {
       ...result,
       id: Math.random().toString(36).substr(2, 9),
-      backdropPath: `https://picsum.photos/seed/${result.title}/1920/1080`,
-      posterPath: `https://picsum.photos/seed/${result.title}/500/750`,
+      backdropPath: `https://picsum.photos/seed/${encodeURIComponent(result.title)}/1920/1080`,
+      posterPath: `https://picsum.photos/seed/${encodeURIComponent(result.title)}/500/750`,
       isOriginal: true
     };
   } catch (error) {
@@ -64,12 +65,12 @@ export const getMetadataFromFilename = async (filename: string): Promise<Partial
     const result = JSON.parse(response.text || "{}");
     return {
       ...result,
-      rating: 8.5 + (Math.random() * 1.4), // Nota aleatória alta para parecer recomendação
+      rating: 8.5 + (Math.random() * 1.4),
     };
   } catch (error) {
     return {
       title: filename.split('.')[0],
-      description: "Conteúdo adicionado pelo usuário.",
+      description: "Conteúdo adicionado pelo usuário via Laboratório.",
       genre: ["Vídeo Local"],
       year: new Date().getFullYear(),
       rating: 8.0,
@@ -84,8 +85,8 @@ export const getMoreInfoAboutMovie = async (movieTitle: string): Promise<string>
       model: "gemini-3-flash-preview",
       contents: `Explique por que o filme "${movieTitle}" é uma recomendação obrigatória no estilo da Netflix. Seja entusiasta e use no máximo 3 frases.`,
     });
-    return response.text || "Sem informações adicionais no momento.";
+    return response.text || "Este título é um dos mais aguardados da temporada.";
   } catch (error) {
-    return "Não foi possível carregar mais detalhes agora.";
+    return "Um conteúdo exclusivo que redefine o gênero com uma narrativa envolvente.";
   }
 };

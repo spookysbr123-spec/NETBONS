@@ -10,10 +10,11 @@ import { INITIAL_MOVIES, CATEGORIES } from './constants';
 import { Movie } from './types';
 import { getMovieRecommendation } from './services/geminiService';
 
-const SESSION_KEY = 'netbons_session_v4';
-const PROFILE_KEY = 'netbons_activeProfile_v4';
-const MOVIE_DATA_KEY = 'netbons_user_movies_v4';
-const LOGGED_USER_KEY = 'netbons_current_user_v4';
+// Chaves de persistência consistentes
+const SESSION_KEY = 'netbons_session_v5';
+const PROFILE_KEY = 'netbons_activeProfile_v5';
+const MOVIE_DATA_KEY = 'netbons_user_movies_v5';
+const LOGGED_USER_KEY = 'netbons_current_user_v5';
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 const checkInitialAuth = () => {
@@ -30,12 +31,7 @@ const checkInitialAuth = () => {
         user: userStr ? JSON.parse(userStr) : null
       };
     }
-    localStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(PROFILE_KEY);
-    localStorage.removeItem(LOGGED_USER_KEY);
-  } catch (e) {
-    console.error("Auth check error", e);
-  }
+  } catch (e) {}
   return { isLoggedIn: false, profile: null, user: null };
 };
 
@@ -54,28 +50,12 @@ const App: React.FC = () => {
   });
 
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-  const [heroMovie, setHeroMovie] = useState<Movie>(INITIAL_MOVIES[0]);
+  const [heroMovie, setHeroMovie] = useState<Movie>(movies[0] || INITIAL_MOVIES[0]);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem(MOVIE_DATA_KEY, JSON.stringify(movies));
   }, [movies]);
-
-  useEffect(() => {
-    if (isLoggedIn && activeProfile) {
-      const fetchAi = async () => {
-        try {
-          const rec = await getMovieRecommendation("Ação futurista e suspense");
-          if (rec && rec.title) {
-            const m = { ...rec, isInMyList: false } as Movie;
-            setMovies(prev => prev.find(x => x.title === m.title) ? prev : [m, ...prev]);
-            setHeroMovie(m);
-          }
-        } catch (e) {}
-      };
-      fetchAi();
-    }
-  }, [isLoggedIn, activeProfile]);
 
   const handleLoginSuccess = (userData: any) => {
     const expiry = Date.now() + THIRTY_DAYS_MS;
@@ -91,18 +71,17 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(PROFILE_KEY);
-    localStorage.removeItem(LOGGED_USER_KEY);
+    localStorage.clear(); // Limpa tudo para segurança no logout
     setIsLoggedIn(false);
     setActiveProfile(null);
     setCurrentUser(null);
+    window.location.reload(); // Garante reset total
   };
 
   const handleAddMovie = (m: Movie) => {
     setMovies(prev => [m, ...prev]);
     setSelectedMovie(m);
-    setToast(`"${m.title}" adicionado com sucesso!`);
+    setToast(`"${m.title}" adicionado!`);
     setTimeout(() => setToast(null), 3000);
   };
 
