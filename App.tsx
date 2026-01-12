@@ -16,7 +16,7 @@ const LOGGED_USER_KEY = 'netbons_current_user_v5';
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 const App: React.FC = () => {
-  // Estado inicial calculado com segurança
+  // Estado de Autenticação com proteção contra Null
   const [authState, setAuthState] = useState(() => {
     try {
       const sessionStr = localStorage.getItem(SESSION_KEY);
@@ -32,9 +32,7 @@ const App: React.FC = () => {
           };
         }
       }
-    } catch (e) {
-      console.error("Erro ao carregar sessão:", e);
-    }
+    } catch (e) {}
     return { isLoggedIn: false, user: null, profile: null };
   });
 
@@ -42,25 +40,33 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState(authState.user);
   const [activeProfile, setActiveProfile] = useState(authState.profile);
   
+  // Lista de filmes unificada para todos os usuários do dispositivo
   const [movies, setMovies] = useState<Movie[]>(() => {
     try {
       const saved = localStorage.getItem(MOVIE_DATA_KEY);
-      return saved ? JSON.parse(saved) : INITIAL_MOVIES;
-    } catch {
-      return INITIAL_MOVIES;
-    }
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Garante que INITIAL_MOVIES existam mas não dupliquem
+        const combined = [...parsed];
+        INITIAL_MOVIES.forEach(initial => {
+          if (!combined.some(m => m.id === initial.id)) {
+            combined.push(initial);
+          }
+        });
+        return combined;
+      }
+    } catch (e) {}
+    return INITIAL_MOVIES;
   });
 
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-  const [heroMovie] = useState<Movie>(() => movies[0] || INITIAL_MOVIES[0]);
   const [toast, setToast] = useState<string | null>(null);
 
+  // Sincroniza filmes no LocalStorage sempre que a lista mudar
   useEffect(() => {
     try {
       localStorage.setItem(MOVIE_DATA_KEY, JSON.stringify(movies));
-    } catch (e) {
-      console.error("Erro ao salvar filmes:", e);
-    }
+    } catch (e) {}
   }, [movies]);
 
   const handleLoginSuccess = (userData: any) => {
@@ -89,7 +95,7 @@ const App: React.FC = () => {
   const handleAddMovie = (m: Movie) => {
     setMovies(prev => [m, ...prev]);
     setSelectedMovie(m);
-    setToast(`"${m.title}" adicionado!`);
+    setToast(`"${m.title}" postado na comunidade!`);
     setTimeout(() => setToast(null), 3000);
   };
 
@@ -109,24 +115,26 @@ const App: React.FC = () => {
     }
   };
 
-  // Renderização Condicional Protegida
-  if (!isLoggedIn) {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
-  }
+  // Movie do Hero (dinâmico baseado no último post ou original)
+  const heroMovie = useMemo(() => {
+    return movies.find(m => m.isUserAdded) || movies[0] || INITIAL_MOVIES[0];
+  }, [movies]);
 
-  if (!activeProfile) {
-    return <ProfileSelection userName={currentUser?.name} onSelect={handleProfileSelect} />;
-  }
+  if (!isLoggedIn) return <Login onLoginSuccess={handleLoginSuccess} />;
+  if (!activeProfile) return <ProfileSelection userName={currentUser?.name} onSelect={handleProfileSelect} />;
 
   return (
     <div className="relative min-h-screen bg-[#141414] text-white pb-20 animate-fade-in overflow-x-hidden">
       <Navbar onAddMovie={handleAddMovie} onLogout={handleLogout} activeProfile={activeProfile} />
+      
       <Hero movie={heroMovie} onMoreInfo={setSelectedMovie} />
 
       <div className="relative z-30 -mt-16 md:-mt-48 pb-10">
         {CATEGORIES.map(cat => {
           const categoryMovies = getMoviesByCat(cat.id);
+          // Oculta linhas vazias de comunidade/lista se não houver itens
           if (categoryMovies.length === 0 && (cat.id === 'addedByUser' || cat.id === 'myList')) return null;
+          
           return (
             <MovieRow 
               key={cat.id} 
@@ -149,7 +157,10 @@ const App: React.FC = () => {
       )}
 
       {toast && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[1000] bg-white text-black px-6 py-3 rounded-full font-bold shadow-2xl animate-fade-in-up">
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[1000] bg-[#A78BFA] text-white px-8 py-4 rounded-2xl font-black shadow-2xl animate-fade-in-up flex items-center gap-3">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          </svg>
           {toast}
         </div>
       )}

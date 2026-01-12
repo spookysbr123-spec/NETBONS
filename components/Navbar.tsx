@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Movie } from '../types';
 import AddContentModal from './AddContentModal';
 
@@ -11,12 +11,10 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ onAddMovie, onLogout, activeProfile }) => {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('top');
-  const [pendingFile, setPendingFile] = useState<{ file: File, url: string, thumb: string } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingYoutubeUrl, setPendingYoutubeUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -33,7 +31,14 @@ const Navbar: React.FC<NavbarProps> = ({ onAddMovie, onLogout, activeProfile }) 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleUploadClick = () => fileInputRef.current?.click();
+  const handlePostClick = () => {
+    const url = prompt("Cole a URL do vídeo do YouTube:");
+    if (url && (url.includes('youtube.com') || url.includes('youtu.be'))) {
+      setPendingYoutubeUrl(url);
+    } else if (url) {
+      alert("Por favor, insira uma URL válida do YouTube.");
+    }
+  };
 
   const scrollToSection = (id: string) => {
     setIsMobileMenuOpen(false);
@@ -42,46 +47,6 @@ const Navbar: React.FC<NavbarProps> = ({ onAddMovie, onLogout, activeProfile }) 
     if (element) {
       window.scrollTo({ top: element.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
     }
-  };
-
-  const captureThumbnail = (url: string): Promise<string> => {
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      video.src = url;
-      video.crossOrigin = 'anonymous';
-      video.currentTime = 1;
-      video.muted = true;
-      video.onloadeddata = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg'));
-      };
-      video.onerror = () => resolve('https://picsum.photos/1920/1080');
-      video.load();
-    });
-  };
-
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setIsUploading(true);
-    try {
-      const url = URL.createObjectURL(file);
-      const thumb = await captureThumbnail(url);
-      setPendingFile({ file, url, thumb });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleConfirmAdd = (movie: Movie) => {
-    onAddMovie(movie);
-    setPendingFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const navLinks = [
@@ -114,10 +79,9 @@ const Navbar: React.FC<NavbarProps> = ({ onAddMovie, onLogout, activeProfile }) 
         </div>
 
         <div className="flex items-center gap-3 md:gap-6">
-          <input type="file" ref={fileInputRef} className="hidden" accept="video/*" onChange={handleFileChange} />
-          <button onClick={handleUploadClick} disabled={isUploading} className="flex items-center gap-2 bg-[#A78BFA] hover:bg-[#8B5CF6] transition-all px-4 md:px-6 py-2 rounded-full text-xs md:text-sm font-black shadow-lg">
-            {isUploading ? <span className="animate-spin text-lg">↻</span> : <span>+</span>}
-            <span className="hidden sm:inline">Postar</span>
+          <button onClick={handlePostClick} className="flex items-center gap-2 bg-[#A78BFA] hover:bg-[#8B5CF6] transition-all px-4 md:px-6 py-2 rounded-full text-xs md:text-sm font-black shadow-lg">
+            <span>+</span>
+            <span className="hidden sm:inline">Postar Link</span>
           </button>
           
           <div className="relative group">
@@ -146,14 +110,12 @@ const Navbar: React.FC<NavbarProps> = ({ onAddMovie, onLogout, activeProfile }) 
         </div>
       )}
 
-      {pendingFile && (
+      {pendingYoutubeUrl && (
         <AddContentModal 
-          file={pendingFile.file}
-          videoUrl={pendingFile.url}
-          thumbnail={pendingFile.thumb}
-          onConfirm={handleConfirmAdd}
-          onCancel={() => setPendingFile(null)}
-          authorName={activeProfile?.name} // Passa o nome do autor logado
+          youtubeUrl={pendingYoutubeUrl}
+          onConfirm={onAddMovie}
+          onCancel={() => setPendingYoutubeUrl(null)}
+          authorName={activeProfile?.name}
         />
       )}
     </>

@@ -10,11 +10,12 @@ export interface Movie {
   genre: string[];
   isOriginal?: boolean;
   isUserAdded?: boolean;
+  isYoutube?: boolean; // Novo campo para identificar links do YT
   ageRating?: 'L' | '10' | '12' | '14' | '16' | '18';
   duration?: string;
-  videoUrl?: string; // URL temporária ou identificador
+  videoUrl?: string; 
   isInMyList?: boolean;
-  authorName?: string; // Nome de quem postou
+  authorName?: string;
 }
 
 export interface Category {

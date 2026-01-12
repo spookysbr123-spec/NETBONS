@@ -2,31 +2,34 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Movie } from "../types";
 
-// Função para obter a chave de forma que nunca quebre o script
-const safeGetApiKey = (): string => {
+// Função de detecção de API KEY à prova de falhas
+const getApiKeySecure = (): string => {
   try {
-    // Verifica se 'process' existe antes de acessar 'env'
+    // Tenta acessar via process.env com verificação de existência
     if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
       return process.env.API_KEY;
     }
+    // Fallback para globalThis caso o bundler injete de outra forma
+    const g = globalThis as any;
+    if (g.process?.env?.API_KEY) return g.process.env.API_KEY;
   } catch (e) {
-    console.warn("Ambiente sem process.env detectado.");
+    console.warn("Ambiente de chaves não detectado.");
   }
   return "";
 };
 
-// Inicialização adiada/segura
-const getAIInstance = () => {
-  const apiKey = safeGetApiKey();
-  return new GoogleGenAI({ apiKey });
+// Inicialização segura - só cria a instância quando necessário
+const createAI = () => {
+  const key = getApiKeySecure();
+  return new GoogleGenAI({ apiKey: key });
 };
 
 export const getMovieRecommendation = async (userPreference: string): Promise<Partial<Movie>> => {
   try {
-    const ai = getAIInstance();
+    const ai = createAI();
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Gere uma ideia de filme fictício para a Netflix com base no interesse: "${userPreference}". Retorne apenas JSON puro.`,
+      contents: `Gere um filme fictício Netflix para o tema: "${userPreference}". Retorne JSON puro.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -47,23 +50,23 @@ export const getMovieRecommendation = async (userPreference: string): Promise<Pa
     const result = JSON.parse(response.text || "{}");
     return {
       ...result,
-      id: Math.random().toString(36).substr(2, 9),
+      id: 'gen-' + Math.random().toString(36).substr(2, 9),
       backdropPath: `https://picsum.photos/seed/${encodeURIComponent(result.title || 'movie')}/1920/1080`,
       posterPath: `https://picsum.photos/seed/${encodeURIComponent(result.title || 'movie')}/500/750`,
       isOriginal: true
     };
   } catch (error) {
-    console.error("Erro Gemini:", error);
+    console.error("Gemini Error:", error);
     throw error;
   }
 };
 
 export const getMetadataFromFilename = async (filename: string): Promise<Partial<Movie>> => {
   try {
-    const ai = getAIInstance();
+    const ai = createAI();
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Analise o nome do arquivo: "${filename}". Deduza título, descrição curta, gêneros e classificação. Retorne JSON.`,
+      contents: `Extraia metadados de filme do arquivo: "${filename}". Retorne JSON.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -81,15 +84,12 @@ export const getMetadataFromFilename = async (filename: string): Promise<Partial
     });
 
     const result = JSON.parse(response.text || "{}");
-    return {
-      ...result,
-      rating: 8.5,
-    };
+    return { ...result, rating: 8.5 };
   } catch (error) {
     return {
       title: filename.split('.')[0],
-      description: "Conteúdo pessoal carregado no Netbons.",
-      genre: ["Vídeo"],
+      description: "Vídeo enviado pela comunidade.",
+      genre: ["Comunidade"],
       year: new Date().getFullYear(),
       rating: 8.0,
       ageRating: 'L'
@@ -99,12 +99,12 @@ export const getMetadataFromFilename = async (filename: string): Promise<Partial
 
 export const getMoreInfoAboutMovie = async (movieTitle: string): Promise<string> => {
   try {
-    const ai = getAIInstance();
+    const ai = createAI();
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Explique brevemente por que assistir "${movieTitle}". Máximo 15 palavras.`,
+      contents: `Resuma por que assistir "${movieTitle}" em 10 palavras.`,
     });
-    return response.text || "Uma escolha excelente para o seu catálogo.";
+    return response.text || "Uma experiência visual única disponível agora.";
   } catch (error) {
     return "Um título envolvente que você não pode perder.";
   }
