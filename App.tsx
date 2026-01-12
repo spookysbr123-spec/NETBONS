@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
@@ -8,57 +8,59 @@ import ProfileSelection from './components/ProfileSelection';
 import Login from './components/Login';
 import { INITIAL_MOVIES, CATEGORIES } from './constants';
 import { Movie } from './types';
-import { getMovieRecommendation } from './services/geminiService';
 
-// Chaves unificadas v5
 const SESSION_KEY = 'netbons_session_v5';
 const PROFILE_KEY = 'netbons_activeProfile_v5';
 const MOVIE_DATA_KEY = 'netbons_user_movies_v5';
 const LOGGED_USER_KEY = 'netbons_current_user_v5';
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
-const checkInitialAuth = () => {
-  try {
-    const sessionStr = localStorage.getItem(SESSION_KEY);
-    if (!sessionStr) return { isLoggedIn: false, profile: null, user: null };
-    
-    const session = JSON.parse(sessionStr);
-    if (Date.now() < session.expiry) {
-      const profileStr = localStorage.getItem(PROFILE_KEY);
-      const userStr = localStorage.getItem(LOGGED_USER_KEY);
-      return { 
-        isLoggedIn: true, 
-        profile: profileStr ? JSON.parse(profileStr) : null,
-        user: userStr ? JSON.parse(userStr) : null
-      };
-    }
-  } catch (e) {
-    console.error("Auth Error:", e);
-  }
-  return { isLoggedIn: false, profile: null, user: null };
-};
-
 const App: React.FC = () => {
-  const initial = checkInitialAuth();
-  const [isLoggedIn, setIsLoggedIn] = useState(initial.isLoggedIn);
-  const [activeProfile, setActiveProfile] = useState(initial.profile);
-  const [currentUser, setCurrentUser] = useState<any>(initial.user);
+  // Estado inicial calculado com segurança
+  const [authState, setAuthState] = useState(() => {
+    try {
+      const sessionStr = localStorage.getItem(SESSION_KEY);
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        if (Date.now() < session.expiry) {
+          const userStr = localStorage.getItem(LOGGED_USER_KEY);
+          const profileStr = localStorage.getItem(PROFILE_KEY);
+          return {
+            isLoggedIn: true,
+            user: userStr ? JSON.parse(userStr) : null,
+            profile: profileStr ? JSON.parse(profileStr) : null
+          };
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao carregar sessão:", e);
+    }
+    return { isLoggedIn: false, user: null, profile: null };
+  });
+
+  const [isLoggedIn, setIsLoggedIn] = useState(authState.isLoggedIn);
+  const [currentUser, setCurrentUser] = useState(authState.user);
+  const [activeProfile, setActiveProfile] = useState(authState.profile);
   
   const [movies, setMovies] = useState<Movie[]>(() => {
-    const saved = localStorage.getItem(MOVIE_DATA_KEY);
-    if (saved) {
-      try { return JSON.parse(saved); } catch { return INITIAL_MOVIES; }
+    try {
+      const saved = localStorage.getItem(MOVIE_DATA_KEY);
+      return saved ? JSON.parse(saved) : INITIAL_MOVIES;
+    } catch {
+      return INITIAL_MOVIES;
     }
-    return INITIAL_MOVIES;
   });
 
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-  const [heroMovie, setHeroMovie] = useState<Movie>(movies[0] || INITIAL_MOVIES[0]);
+  const [heroMovie] = useState<Movie>(() => movies[0] || INITIAL_MOVIES[0]);
   const [toast, setToast] = useState<string | null>(null);
 
-  // Sincronizar filmes com armazenamento local
   useEffect(() => {
-    localStorage.setItem(MOVIE_DATA_KEY, JSON.stringify(movies));
+    try {
+      localStorage.setItem(MOVIE_DATA_KEY, JSON.stringify(movies));
+    } catch (e) {
+      console.error("Erro ao salvar filmes:", e);
+    }
   }, [movies]);
 
   const handleLoginSuccess = (userData: any) => {
@@ -107,8 +109,14 @@ const App: React.FC = () => {
     }
   };
 
-  if (!isLoggedIn) return <Login onLoginSuccess={handleLoginSuccess} />;
-  if (!activeProfile) return <ProfileSelection userName={currentUser?.name} onSelect={handleProfileSelect} />;
+  // Renderização Condicional Protegida
+  if (!isLoggedIn) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  if (!activeProfile) {
+    return <ProfileSelection userName={currentUser?.name} onSelect={handleProfileSelect} />;
+  }
 
   return (
     <div className="relative min-h-screen bg-[#141414] text-white pb-20 animate-fade-in overflow-x-hidden">
@@ -116,13 +124,28 @@ const App: React.FC = () => {
       <Hero movie={heroMovie} onMoreInfo={setSelectedMovie} />
 
       <div className="relative z-30 -mt-16 md:-mt-48 pb-10">
-        {CATEGORIES.filter(c => getMoviesByCat(c.id).length > 0 || !['addedByUser', 'myList'].includes(c.id)).map(cat => (
-          <MovieRow key={cat.id} id={cat.id} title={cat.title} movies={getMoviesByCat(cat.id)} isLarge={cat.id === 'originals'} onMovieClick={setSelectedMovie} />
-        ))}
+        {CATEGORIES.map(cat => {
+          const categoryMovies = getMoviesByCat(cat.id);
+          if (categoryMovies.length === 0 && (cat.id === 'addedByUser' || cat.id === 'myList')) return null;
+          return (
+            <MovieRow 
+              key={cat.id} 
+              id={cat.id} 
+              title={cat.title} 
+              movies={categoryMovies} 
+              isLarge={cat.id === 'originals'} 
+              onMovieClick={setSelectedMovie} 
+            />
+          );
+        })}
       </div>
 
       {selectedMovie && (
-        <MovieDetailsModal movie={selectedMovie} onClose={() => setSelectedMovie(null)} onToggleMyList={() => toggleMyList(selectedMovie.id)} />
+        <MovieDetailsModal 
+          movie={selectedMovie} 
+          onClose={() => setSelectedMovie(null)} 
+          onToggleMyList={() => toggleMyList(selectedMovie.id)} 
+        />
       )}
 
       {toast && (
