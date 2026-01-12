@@ -86,7 +86,7 @@ const Navbar: React.FC<NavbarProps> = ({ onAddMovie, onLogout, activeProfile }) 
 
   const navLinks = [
     { id: 'top', label: 'Início' },
-    { id: 'addedByUser', label: 'Laboratório' },
+    { id: 'addedByUser', label: 'Comunidade' },
     { id: 'newReleases', label: 'Novos' },
     { id: 'trending', label: 'Em Alta' },
     { id: 'myList', label: 'Minha Lista' },
@@ -104,11 +104,10 @@ const Navbar: React.FC<NavbarProps> = ({ onAddMovie, onLogout, activeProfile }) 
           <h1 onClick={() => scrollToSection('top')} className="text-2xl md:text-3xl font-black tracking-tighter uppercase cursor-pointer">
             <span className="text-white">NET</span><span className="text-[#A78BFA]">BONS</span>
           </h1>
-          <ul className="hidden lg:flex gap-6 text-sm font-medium">
+          <ul className="hidden lg:flex gap-6 text-sm font-medium text-gray-400">
             {navLinks.map(link => (
-              <li key={link.id} onClick={() => scrollToSection(link.id)} className={`cursor-pointer relative px-1 ${activeSection === link.id ? 'text-white' : 'text-gray-400 hover:text-white'}`}>
+              <li key={link.id} onClick={() => scrollToSection(link.id)} className={`cursor-pointer hover:text-white transition-colors ${activeSection === link.id ? 'text-white font-black' : ''}`}>
                 {link.label}
-                {activeSection === link.id && <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-[#A78BFA] rounded-full" />}
               </li>
             ))}
           </ul>
@@ -118,7 +117,7 @@ const Navbar: React.FC<NavbarProps> = ({ onAddMovie, onLogout, activeProfile }) 
           <input type="file" ref={fileInputRef} className="hidden" accept="video/*" onChange={handleFileChange} />
           <button onClick={handleUploadClick} disabled={isUploading} className="flex items-center gap-2 bg-[#A78BFA] hover:bg-[#8B5CF6] transition-all px-4 md:px-6 py-2 rounded-full text-xs md:text-sm font-black shadow-lg">
             {isUploading ? <span className="animate-spin text-lg">↻</span> : <span>+</span>}
-            <span className="hidden sm:inline">Adicionar</span>
+            <span className="hidden sm:inline">Postar</span>
           </button>
           
           <div className="relative group">
@@ -127,7 +126,11 @@ const Navbar: React.FC<NavbarProps> = ({ onAddMovie, onLogout, activeProfile }) 
             </div>
             {isAccountMenuOpen && (
               <div className="absolute right-0 top-12 w-48 bg-black/95 border border-white/10 rounded-2xl py-4 shadow-2xl">
-                <button onClick={onLogout} className="w-full text-left px-4 py-2 text-sm text-purple-400 font-bold hover:bg-white/5">Sair</button>
+                <div className="px-4 py-2 border-b border-white/5 mb-2">
+                  <p className="text-[10px] text-gray-500 uppercase font-black">Perfil Ativo</p>
+                  <p className="text-white font-bold">{activeProfile?.name}</p>
+                </div>
+                <button onClick={onLogout} className="w-full text-left px-4 py-2 text-sm text-purple-400 font-bold hover:bg-white/5">Sair do NETBONS</button>
               </div>
             )}
           </div>
@@ -139,7 +142,7 @@ const Navbar: React.FC<NavbarProps> = ({ onAddMovie, onLogout, activeProfile }) 
           {navLinks.map(link => (
             <div key={link.id} onClick={() => scrollToSection(link.id)} className="text-2xl font-black text-gray-400 hover:text-white transition-colors">{link.label}</div>
           ))}
-          <button onClick={onLogout} className="mt-auto text-purple-400 font-bold">Sair do NETBONS</button>
+          <button onClick={onLogout} className="mt-auto text-purple-400 font-bold">Sair</button>
         </div>
       )}
 
@@ -150,6 +153,7 @@ const Navbar: React.FC<NavbarProps> = ({ onAddMovie, onLogout, activeProfile }) 
           thumbnail={pendingFile.thumb}
           onConfirm={handleConfirmAdd}
           onCancel={() => setPendingFile(null)}
+          authorName={activeProfile?.name} // Passa o nome do autor logado
         />
       )}
     </>

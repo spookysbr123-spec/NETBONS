@@ -12,8 +12,9 @@ export interface Movie {
   isUserAdded?: boolean;
   ageRating?: 'L' | '10' | '12' | '14' | '16' | '18';
   duration?: string;
-  videoUrl?: string; // URL.createObjectURL para vídeos locais
+  videoUrl?: string; // URL temporária ou identificador
   isInMyList?: boolean;
+  authorName?: string; // Nome de quem postou
 }
 
 export interface Category {
