@@ -11,7 +11,8 @@ interface UserRecord {
   name: string;
 }
 
-const USERS_STORAGE_KEY = 'netbons_registered_users_v4';
+// Chave unificada v5
+const USERS_STORAGE_KEY = 'netbons_registered_users_v5';
 
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [isLoginMode, setIsLoginMode] = useState(true);
@@ -21,8 +22,12 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState<string | null>(null);
 
   const getUsers = (): UserRecord[] => {
-    const saved = localStorage.getItem(USERS_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem(USERS_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -36,24 +41,24 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       const user = users.find(u => u.email.toLowerCase() === normalizedEmail);
       
       if (!user) {
-        setError('Não encontramos uma conta com este e-mail. Tente criar uma!');
+        setError('E-mail não encontrado. Que tal criar uma conta?');
         return;
       }
 
       if (user.password !== password) {
-        setError('Senha incorreta. Por favor, tente novamente.');
+        setError('Senha incorreta. Tente novamente.');
         return;
       }
 
       onLoginSuccess({ name: user.name, email: user.email });
     } else {
       if (users.some(u => u.email.toLowerCase() === normalizedEmail)) {
-        setError('Este e-mail já está cadastrado. Tente fazer login.');
+        setError('Este e-mail já está em uso.');
         return;
       }
 
       if (password.length < 4) {
-        setError('A senha deve ter no mínimo 4 caracteres.');
+        setError('A senha deve ter pelo menos 4 caracteres.');
         return;
       }
 
@@ -66,24 +71,24 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[400] bg-black flex items-center justify-center">
-      <div className="absolute inset-0 opacity-30">
+    <div className="fixed inset-0 z-[400] bg-black flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0 opacity-20">
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black z-10" />
         <div className="grid grid-cols-6 gap-2 transform -rotate-12 scale-150">
-          {[...Array(30)].map((_, i) => (
+          {[...Array(36)].map((_, i) => (
             <div key={i} className="aspect-[2/3] bg-gray-900 rounded-xl" />
           ))}
         </div>
       </div>
 
-      <div className="relative z-20 w-full max-w-[450px] p-8 md:p-16 bg-black/80 backdrop-blur-2xl md:rounded-[3rem] shadow-2xl">
+      <div className="relative z-20 w-full max-w-[450px] p-8 md:p-16 bg-black/80 backdrop-blur-2xl md:rounded-[3rem] shadow-2xl border border-white/5">
         <h1 className="text-white text-3xl font-black mb-8">
-          {isLoginMode ? 'Entrar' : 'Criar Conta'}
+          {isLoginMode ? 'Entrar' : 'Assinar'}
         </h1>
 
         {error && (
-          <div className="bg-[#e87c03] text-white p-4 rounded-xl mb-6 text-sm animate-fade-in-up flex gap-3 items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <div className="bg-[#e87c03] text-white p-4 rounded-xl mb-6 text-sm animate-fade-in-up flex gap-3 items-start font-medium">
+             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
             {error}
@@ -94,9 +99,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           {!isLoginMode && (
             <input 
               type="text" 
-              placeholder="Como quer ser chamado?"
+              placeholder="Nome"
               required
-              className="w-full bg-[#333] text-white px-5 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A78BFA]"
+              className="w-full bg-[#333] text-white px-5 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A78BFA] transition-all"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -106,7 +111,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             type="email" 
             placeholder="Email"
             required
-            className="w-full bg-[#333] text-white px-5 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A78BFA]"
+            className="w-full bg-[#333] text-white px-5 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A78BFA] transition-all"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -115,26 +120,26 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             type="password" 
             placeholder="Senha"
             required
-            className="w-full bg-[#333] text-white px-5 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A78BFA]"
+            className="w-full bg-[#333] text-white px-5 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A78BFA] transition-all"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
 
           <button 
             type="submit"
-            className="w-full bg-[#A78BFA] text-white py-4 rounded-full font-black text-lg hover:bg-[#8B5CF6] transition-all transform active:scale-95"
+            className="w-full bg-[#A78BFA] text-white py-4 rounded-full font-black text-lg hover:bg-[#8B5CF6] transition-all transform active:scale-95 shadow-xl"
           >
-            {isLoginMode ? 'Entrar' : 'Registrar'}
+            {isLoginMode ? 'Entrar' : 'Começar'}
           </button>
         </form>
 
-        <p className="mt-8 text-gray-500 text-center">
-          {isLoginMode ? 'Novo aqui?' : 'Já tem conta?'} {' '}
+        <p className="mt-8 text-gray-500 text-center text-sm md:text-base">
+          {isLoginMode ? 'Novo por aqui?' : 'Já tem uma conta?'} {' '}
           <span 
-            onClick={() => setIsLoginMode(!isLoginMode)}
+            onClick={() => { setIsLoginMode(!isLoginMode); setError(null); }}
             className="text-white font-bold hover:underline cursor-pointer"
           >
-            {isLoginMode ? 'Assine agora.' : 'Entre aqui.'}
+            {isLoginMode ? 'Crie sua conta.' : 'Faça login.'}
           </span>
         </p>
       </div>

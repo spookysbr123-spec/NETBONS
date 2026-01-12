@@ -10,7 +10,7 @@ import { INITIAL_MOVIES, CATEGORIES } from './constants';
 import { Movie } from './types';
 import { getMovieRecommendation } from './services/geminiService';
 
-// Chaves de persistência consistentes
+// Chaves unificadas v5
 const SESSION_KEY = 'netbons_session_v5';
 const PROFILE_KEY = 'netbons_activeProfile_v5';
 const MOVIE_DATA_KEY = 'netbons_user_movies_v5';
@@ -18,9 +18,10 @@ const LOGGED_USER_KEY = 'netbons_current_user_v5';
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 const checkInitialAuth = () => {
-  const sessionStr = localStorage.getItem(SESSION_KEY);
-  if (!sessionStr) return { isLoggedIn: false, profile: null, user: null };
   try {
+    const sessionStr = localStorage.getItem(SESSION_KEY);
+    if (!sessionStr) return { isLoggedIn: false, profile: null, user: null };
+    
     const session = JSON.parse(sessionStr);
     if (Date.now() < session.expiry) {
       const profileStr = localStorage.getItem(PROFILE_KEY);
@@ -31,7 +32,9 @@ const checkInitialAuth = () => {
         user: userStr ? JSON.parse(userStr) : null
       };
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error("Auth Error:", e);
+  }
   return { isLoggedIn: false, profile: null, user: null };
 };
 
@@ -53,6 +56,7 @@ const App: React.FC = () => {
   const [heroMovie, setHeroMovie] = useState<Movie>(movies[0] || INITIAL_MOVIES[0]);
   const [toast, setToast] = useState<string | null>(null);
 
+  // Sincronizar filmes com armazenamento local
   useEffect(() => {
     localStorage.setItem(MOVIE_DATA_KEY, JSON.stringify(movies));
   }, [movies]);
@@ -71,11 +75,13 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    localStorage.clear(); // Limpa tudo para segurança no logout
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(PROFILE_KEY);
+    localStorage.removeItem(LOGGED_USER_KEY);
     setIsLoggedIn(false);
     setActiveProfile(null);
     setCurrentUser(null);
-    window.location.reload(); // Garante reset total
+    window.location.reload();
   };
 
   const handleAddMovie = (m: Movie) => {

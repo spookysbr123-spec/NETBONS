@@ -2,8 +2,16 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Movie } from "../types";
 
-// Inicialização segura para o ambiente de produção
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// Acesso seguro ao process.env para evitar ReferenceError em navegadores puros
+const getApiKey = () => {
+  try {
+    return process.env.API_KEY || '';
+  } catch {
+    return '';
+  }
+};
+
+const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
 export const getMovieRecommendation = async (userPreference: string): Promise<Partial<Movie>> => {
   try {
@@ -36,7 +44,7 @@ export const getMovieRecommendation = async (userPreference: string): Promise<Pa
       isOriginal: true
     };
   } catch (error) {
-    console.error("Erro ao buscar recomendação Gemini:", error);
+    console.error("Erro Gemini:", error);
     throw error;
   }
 };
@@ -45,7 +53,7 @@ export const getMetadataFromFilename = async (filename: string): Promise<Partial
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Analise o nome do arquivo de vídeo: "${filename}". Com base nisso, deduza o título real do filme/série, crie uma descrição curta no estilo Netflix, defina gêneros adequados e classificação etária. Retorne JSON.`,
+      contents: `Analise o nome do arquivo de vídeo: "${filename}". Deduza título, descrição curta (estilo Netflix), gêneros e classificação. Retorne JSON.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -65,15 +73,15 @@ export const getMetadataFromFilename = async (filename: string): Promise<Partial
     const result = JSON.parse(response.text || "{}");
     return {
       ...result,
-      rating: 8.5 + (Math.random() * 1.4),
+      rating: 8.0 + (Math.random() * 2),
     };
   } catch (error) {
     return {
       title: filename.split('.')[0],
-      description: "Conteúdo adicionado pelo usuário via Laboratório.",
-      genre: ["Vídeo Local"],
+      description: "Conteúdo pessoal adicionado ao Laboratório.",
+      genre: ["Vídeo"],
       year: new Date().getFullYear(),
-      rating: 8.0,
+      rating: 8.5,
       ageRating: 'L'
     };
   }
@@ -83,10 +91,10 @@ export const getMoreInfoAboutMovie = async (movieTitle: string): Promise<string>
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Explique por que o filme "${movieTitle}" é uma recomendação obrigatória no estilo da Netflix. Seja entusiasta e use no máximo 3 frases.`,
+      contents: `Por que o filme "${movieTitle}" é imperdível na Netflix? Máximo 20 palavras.`,
     });
-    return response.text || "Este título é um dos mais aguardados da temporada.";
+    return response.text || "Um clássico instantâneo que você precisa conferir.";
   } catch (error) {
-    return "Um conteúdo exclusivo que redefine o gênero com uma narrativa envolvente.";
+    return "Uma narrativa poderosa que redefine o gênero.";
   }
 };
